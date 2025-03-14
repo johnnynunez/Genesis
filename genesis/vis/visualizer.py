@@ -1,9 +1,14 @@
 import pyglet
+
 import genesis as gs
 from genesis.repr_base import RBC
 
 from .camera import Camera
 from .rasterizer import Rasterizer
+
+
+VIEWER_DEFAULT_HEIGHT_RATIO = 0.5
+VIEWER_DEFAULT_ASPECT_RATIO = 0.75
 
 
 class DummyViewerLock:
@@ -29,27 +34,30 @@ class Visualizer(RBC):
             from .rasterizer_context import RasterizerContext
 
         except Exception as e:
-            raise ImportError("Rendering not working on this machine.") from e
+            gs.raise_exception_from("Rendering not working on this machine.", e)
         self._context = RasterizerContext(vis_options)
 
         # try to connect to display
         try:
-            display = pyglet.display.get_display()
-            screen = display.get_default_screen()
+            if pyglet.version < "2.0":
+                display = pyglet.canvas.Display()
+                screen = display.get_default_screen()
+                scale = 1.0
+            else:
+                display = pyglet.display.get_display()
+                screen = display.get_default_screen()
+                scale = screen.get_scale()
             self._connected_to_display = True
-        except Exception:
+        except Exception as e:
+            if show_viewer:
+                gs.raise_exception_from("No display detected. Use `show_viewer=False` for headless mode.", e)
             self._connected_to_display = False
 
         if show_viewer:
-            if not self._connected_to_display:
-                gs.raise_exception("No display detected. Use `show_viewer=False` for headless mode.")
-
             if viewer_options.res is None:
-                viewer_size_ratio = screen.get_scale() * 0.5
-                viewer_options.res = (
-                    int(screen.height * viewer_size_ratio / 0.75),
-                    int(screen.height * viewer_size_ratio),
-                )
+                viewer_height = (screen.height * scale) * VIEWER_DEFAULT_HEIGHT_RATIO
+                viewer_width = viewer_height / VIEWER_DEFAULT_ASPECT_RATIO
+                viewer_options.res = (int(viewer_width), int(viewer_height))
 
             self._viewer = Viewer(viewer_options, self._context)
 

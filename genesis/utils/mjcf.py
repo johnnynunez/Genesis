@@ -257,6 +257,14 @@ def parse_geom(mj, i_g, scale, convexify, surface, xml_path):
             tmesh = trimesh.creation.icosphere(radius=radius)
         gs_type = gs.GEOM_TYPE.SPHERE
 
+    elif mj_geom.type == mujoco.mjtGeom.mjGEOM_ELLIPSOID:
+        if is_col:
+            tmesh = trimesh.creation.icosphere(subdivisions=2)
+        else:
+            tmesh = trimesh.creation.icosphere(radius=1.0)
+        tmesh.apply_transform(np.diag([*geom_size, 1]))
+        gs_type = gs.GEOM_TYPE.ELLIPSOID
+
     elif mj_geom.type == mujoco.mjtGeom.mjGEOM_CAPSULE:
         radius = geom_size[0]
         halflength = geom_size[1]
@@ -296,7 +304,7 @@ def parse_geom(mj, i_g, scale, convexify, surface, xml_path):
                 tmesh.visual = visual
 
     elif mj_geom.type == mujoco.mjtGeom.mjGEOM_MESH:
-        mj_mesh = mj.mesh(mj_geom.dataid)
+        mj_mesh = mj.mesh(int(mj_geom.dataid))
 
         vert_start = int(mj_mesh.vertadr)
         vert_num = int(mj_mesh.vertnum)
@@ -368,7 +376,8 @@ def parse_geom(mj, i_g, scale, convexify, surface, xml_path):
         "pos": mj_geom.pos * scale,
         "quat": mj_geom.quat,
         "mesh": mesh,
-        "is_col": is_col,
+        "contype": mj_geom.contype[0],
+        "conaffinity": mj_geom.conaffinity[0],
         "is_convex": True,
         "data": geom_size,
         "friction": mj_geom.friction[0],
